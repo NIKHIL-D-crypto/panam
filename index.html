@@ -256,6 +256,7 @@ html.still *{transition:none!important;animation:none!important}
     <button class="bal" type="button" data-go="money"><span class="l"><svg class="i" data-i="swap"></svg>Money</span><span class="muted">Cash, bank, savings</span></button>
   </section>
   <p class="fine">Privacy settings arrive in a later step.</p>
+  <section class="card hidden" id="gacard" style="margin-top:12px"><button class="bal" type="button" data-sw="ga" role="switch"><span>Anonymous visit counts<br><span class="muted" style="font-size:14px">Counts visits only. It never sees your entries or amounts.</span></span><span class="sw"></span></button></section>
   <button class="btn alt" type="button" id="reset">Erase all data on this device</button>
   <section class="card" style="margin-top:12px">
     <div class="mrow"><b>Panam</b><span class="muted">Version 0.7</span></div>
@@ -414,7 +415,7 @@ $('sbg').addEventListener('click',function(ev){
   var t=ev.target.closest('[data-t]'),a=ev.target.closest('[data-a]');
   if(t){sh.tab=t.dataset.t;drawSheet();}
   else if(a){sh.a=a.dataset.a;$('fa').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b===a);});}
-  else if(ev.target.id==='fs')saveSheet();else if(ev.target.id==='cs')saveCat();else if(ev.target.id==='fx')delItem();else if(ev.target.id==='ci')doImport();else if(ev.target.id==='lon')lockOn();else if(ev.target.id==='loff')lockOff();else if(ev.target.id==='lnew')lockNew();else if(ev.target.id==='ldone')lockDone();else if(ev.target.id==='cu'){S.cur=$('sc2').value;save();$('sbg').classList.remove('on');render();toast('Currency changed');}else{var ic=ev.target.closest('[data-ic]');if(ic){cat.n=$('cn').value;cat.i=ic.dataset.ic;drawCat();}}
+  else if(ev.target.id==='fs')saveSheet();else if(ev.target.id==='cs')saveCat();else if(ev.target.id==='fx')delItem();else if(ev.target.id==='ci')doImport();else if(ev.target.id==='bio1')bioOn();else if(ev.target.id==='bio0')bioOff();else if(ev.target.id==='lon')lockOn();else if(ev.target.id==='loff')lockOff();else if(ev.target.id==='lnew')lockNew();else if(ev.target.id==='ldone')lockDone();else if(ev.target.id==='cu'){S.cur=$('sc2').value;save();$('sbg').classList.remove('on');render();toast('Currency changed');}else{var ic=ev.target.closest('[data-ic]');if(ic){cat.n=$('cn').value;cat.i=ic.dataset.ic;drawCat();}}
 });
 function saveSheet(){
   var amt=Math.round(parseFloat($('fm').value.replace(',','.'))*100)/100,date=$('fd').value||today(),er=$('err'),k=calc(sh.id);
@@ -579,7 +580,7 @@ function applyPrefs(){
   r.classList.toggle('still',S.an===false);
   r.style.setProperty('--z',[1,1.15,1.3][S.ts||0]);
   document.querySelectorAll('#tseg button').forEach(function(b){b.classList.toggle('on',+b.dataset.ts===(S.ts||0));});
-  $('curl').textContent=S.cur;$('lockl').textContent=S.lock?'On':'Off';
+  $('curl').textContent=S.cur;$('lockl').textContent=S.lock?'On':'Off';$('gacard').classList.toggle('hidden',!STATS_ID);loadStats();
 }
 document.addEventListener('click',function(ev){
   var x;
@@ -694,7 +695,7 @@ function pinOk(a,b,er){if(!/^\d{4,8}$/.test(a)){er.textContent='Use 4 to 8 digit
 function openLock(){
   pend=null;
   $('sheet').innerHTML=S.lock
-   ?'<h2>App lock is on</h2><label class="f" for="lp">Enter your PIN to change it</label><input class="in" id="lp" type="password" inputmode="numeric" autocomplete="off"><div class="err" id="err" role="alert"></div><button class="btn" type="button" id="lnew">Make a new recovery code</button><button class="btn alt" type="button" id="loff">Turn off app lock</button>'
+   ?'<h2>App lock is on</h2><label class="f" for="lp">Enter your PIN to change it</label><input class="in" id="lp" type="password" inputmode="numeric" autocomplete="off"><div class="err" id="err" role="alert"></div><button class="btn" type="button" id="lnew">Make a new recovery code</button>'+(S.lock.cid?'<button class="btn alt" type="button" id="bio0">Stop using fingerprint or face</button>':'<button class="btn alt" type="button" id="bio1">Use fingerprint or face</button>')+'<button class="btn alt" type="button" id="loff">Turn off app lock</button>'
    :'<h2>Turn on app lock</h2><p class="muted">Asks for a PIN when you open Panam. It keeps casual snoopers out of the app. It does not encrypt the data on your phone.</p><label class="f" for="l1">New PIN, 4 to 8 digits</label><input class="in" id="l1" type="password" inputmode="numeric" autocomplete="off"><label class="f" for="l2">Repeat PIN</label><input class="in" id="l2" type="password" inputmode="numeric" autocomplete="off"><div class="err" id="err" role="alert"></div><button class="btn" type="button" id="lon">Turn on</button>';
   $('sbg').classList.add('on');
 }
@@ -710,7 +711,7 @@ async function lockOn(){
 async function lockNew(){
   var er=$('err');if(!guard(er))return;
   if(!await ck(S.lock.p,$('lp').value)){bad(er);return;}
-  var code=newCode();pend={p:S.lock.p,r:await mk(normCode(code))};showCode(code);
+  var code=newCode();pend=Object.assign({},S.lock,{r:await mk(normCode(code))});showCode(code);
 }
 async function lockOff(){
   var er=$('err');if(!guard(er))return;
@@ -722,12 +723,14 @@ function lockDone(){
   S.lock=pend;pend=null;save();$('sbg').classList.remove('on');render();toast('App lock is on');
 }
 function showLock(){
-  $('lbody').innerHTML='<h1>Panam is locked</h1><p class="muted">Enter your PIN.</p><input class="in" id="lpin" type="password" inputmode="numeric" autocomplete="off"><div class="err" id="lerr" role="alert"></div><button class="btn" type="button" id="lunlock">Unlock</button><button class="btn alt" type="button" id="lforgot">Forgot PIN?</button>';
+  $('lbody').innerHTML='<h1>Panam is locked</h1><p class="muted">Enter your PIN.</p><input class="in" id="lpin" type="password" inputmode="numeric" autocomplete="off"><div class="err" id="lerr" role="alert"></div><button class="btn" type="button" id="lunlock">Unlock</button>'+(S.lock&&S.lock.cid?'<button class="btn alt" type="button" id="lbio">Use fingerprint or face</button>':'')+'<button class="btn alt" type="button" id="lforgot">Forgot PIN?</button>';
   $('lock').classList.add('on');
+  if(S.lock&&S.lock.cid)bioUnlock();
 }
 $('lock').addEventListener('click',async function(ev){
   var id=ev.target.id,er=$('lerr');
   if(id==='lunlock'){if(!guard(er))return;if(await ck(S.lock.p,$('lpin').value))$('lock').classList.remove('on');else bad(er);}
+  else if(id==='lbio')bioUnlock();
   else if(id==='lforgot'){$('lbody').innerHTML='<h1>Reset your PIN</h1><label class="f" for="lcode">Recovery code</label><input class="in" id="lcode" autocapitalize="characters" autocomplete="off"><label class="f" for="lnp">New PIN, 4 to 8 digits</label><input class="in" id="lnp" type="password" inputmode="numeric" autocomplete="off"><label class="f" for="lnq">Repeat new PIN</label><input class="in" id="lnq" type="password" inputmode="numeric" autocomplete="off"><div class="err" id="lerr" role="alert"></div><button class="btn" type="button" id="lreset">Reset PIN</button><button class="btn alt" type="button" id="lback">Back</button>';}
   else if(id==='lback')showLock();
   else if(id==='lreset'){
@@ -740,12 +743,34 @@ $('lock').addEventListener('click',async function(ev){
 document.addEventListener('click',function(ev){if(ev.target.closest('[data-lock]'))openLock();});
 document.addEventListener('visibilitychange',function(){if(document.hidden)hid=Date.now();else if(S.lock&&hid&&Date.now()-hid>60000)showLock();});
 
+/* ===== FINGERPRINT/FACE AND VISIT COUNTS ===== */
+/* Paste your counter.dev site id between the quotes to switch visit counts on. Empty means no counting and no network call. */
+var STATS_ID='1b0629c2-f989-4c65-9f2d-560270563cd3';
+function loadStats(){
+  if(!STATS_ID||S.ga===false||window._st||!/^https:$/.test(location.protocol))return;
+  window._st=1;var s=document.createElement('script');s.async=true;s.src='https://cdn.counter.dev/script.js';
+  s.setAttribute('data-id',STATS_ID);s.setAttribute('data-utcoffset',String(-new Date().getTimezoneOffset()/60));document.head.appendChild(s);
+}
+async function bioPin(){var er=$('err');if(!guard(er))return false;if(!await ck(S.lock.p,$('lp').value)){bad(er);return false;}return true;}
+async function bioOn(){
+  var er=$('err');if(!await bioPin())return;
+  if(!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())){er.textContent='Fingerprint or face unlock is not available here. It needs the live site and a screen lock on your phone.';return;}
+  try{
+    var c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'Panam'},user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'panam',displayName:'Panam'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000}});
+    S.lock.cid=b64(c.rawId);save();$('sbg').classList.remove('on');render();toast('Fingerprint or face unlock is on');
+  }catch(e){er.textContent='Could not set it up. Check that your phone has a fingerprint, face or screen lock.';}
+}
+async function bioOff(){if(!await bioPin())return;delete S.lock.cid;save();$('sbg').classList.remove('on');render();toast('Fingerprint or face unlock is off');}
+async function bioUnlock(){
+  try{await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:ub(S.lock.cid),transports:['internal']}],userVerification:'required',timeout:60000}});$('lock').classList.remove('on');}catch(e){}
+}
+
 /* ===== FIRST-RUN SETUP ===== */
 function num(id){return Math.max(0,parseFloat(($(id).value||'0').replace(',','.'))||0);}
 var cs=1;
 function step(n){
   cs=n;var h='';
-  if(n===1)h='<h1>Welcome to Panam</h1><p class="muted">Pick your currency. It sets the symbol and how amounts are written. You can change it later.</p><label class="f" for="sc">Currency</label><select class="in" id="sc">'+opts(CUR,S.cur)+'</select><button class="btn" type="button" data-n="2">Continue</button>';
+  if(n===1)h='<h1>Welcome to Panam</h1><p class="muted">Pick your currency. It sets the symbol and how amounts are written. You can change it later.</p>'+(STATS_ID?'<p class="fine">Panam counts anonymous visits to improve the app. It never sees your entries or amounts. You can switch this off in More.</p>':'')+'<label class="f" for="sc">Currency</label><select class="in" id="sc">'+opts(CUR,S.cur)+'</select><button class="btn" type="button" data-n="2">Continue</button>';
   if(n===2)h='<h1>What do you have today?</h1><p class="muted">Optional. Add what you hold now so your balances start right. Leave blank to start at zero.</p><label class="f" for="s1">Cash in hand</label><input class="in" id="s1" inputmode="decimal" placeholder="0"><label class="f" for="s2">In bank or UPI</label><input class="in" id="s2" inputmode="decimal" placeholder="0"><button class="btn" type="button" data-n="3">Continue</button>';
   if(n===3)h='<h1>Monthly budget</h1><p class="muted">Optional. The most you want to spend in a month. You can set it later.</p><label class="f" for="s3">Budget</label><input class="in" id="s3" inputmode="decimal" placeholder="0"><button class="btn" type="button" data-n="4">Continue</button>';
   if(n===4)h='<h1>Are you a student?</h1><p class="muted">Students have a sibling app made for them.</p><button class="btn" type="button" data-n="5">Yes, I am a student</button><button class="btn alt" type="button" data-n="6">No</button>';
