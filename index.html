@@ -18,7 +18,7 @@
   --bg:#F6F4EE; --card:#FFFFFF; --raised:#ECE9DF; --border:#E0DCCE;
   --text:#1B2B2A; --muted:#5B6B69;
   --accent:#1F6F6B; --on-accent:#FFFFFF;
-  --in:#2E7D5B; --out:#B8504A; --save:#3C6E9F; --warn:#B7791F;
+  --in:#2E7D5B; --out:#AD4741; --save:#3C6E9F; --warn:#9C6410;
   color-scheme:light;
 }
 :root[data-theme="dark"]{
@@ -107,7 +107,7 @@ h1{font:600 28px/1.15 Fraunces,Georgia,serif;margin-bottom:8px}
 .seg button{flex:1;min-height:44px;border-radius:12px;font-weight:500;color:var(--muted)}
 .seg button.on{background:var(--card);color:var(--text);font-weight:600;border:1px solid var(--border)}
 label.f{display:block;margin-top:14px;font-size:14px;color:var(--muted)}
-.in{width:100%;min-height:52px;margin-top:6px;padding:0 14px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit}
+.in{width:100%;min-height:52px;margin-top:6px;padding:0 14px;border-radius:14px;border:1px solid var(--muted);background:var(--bg);color:var(--text);font:inherit}
 .in:focus{outline:3px solid var(--accent);outline-offset:1px}
 .btn{width:100%;min-height:52px;border-radius:26px;background:var(--accent);color:var(--on-accent);font-weight:600;margin-top:18px}
 .btn.alt{background:var(--raised);color:var(--text)}
@@ -329,7 +329,8 @@ if(!S||S.v!==1)S={v:1,cur:'INR',done:false,oc:0,ob:0,bud:0,stu:null,last:'bank',
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 var LOC={INR:'en-IN',USD:'en-US',EUR:'en-IE',GBP:'en-GB',AED:'en-AE',AUD:'en-AU',CAD:'en-CA',SGD:'en-SG'};
 var CUR=[['INR','Indian rupee (₹)'],['USD','US dollar ($)'],['EUR','Euro (€)'],['GBP','British pound (£)'],['AED','UAE dirham'],['AUD','Australian dollar'],['CAD','Canadian dollar'],['SGD','Singapore dollar']];
-function money(n){return new Intl.NumberFormat(LOC[S.cur]||'en-US',{style:'currency',currency:S.cur,currencyDisplay:'narrowSymbol',minimumFractionDigits:0,maximumFractionDigits:2}).format(n);}
+var NF={};
+function money(n){var f=NF[S.cur]||(NF[S.cur]=new Intl.NumberFormat(LOC[S.cur]||'en-US',{style:'currency',currency:S.cur,currencyDisplay:'narrowSymbol',minimumFractionDigits:0,maximumFractionDigits:2}));return f.format(n);}
 var P=[['cash','Cash in hand'],['bank','Bank / UPI'],['sav','Savings'],['else','Elsewhere']];
 var PN={cash:'Cash',bank:'Bank / UPI',sav:'Savings','else':'Elsewhere'};
 var XC=['Food','Transport','Housing','Bills and Utilities','Health','Shopping','Family','Entertainment','Education','Insurance','Loan and EMI','Other'];
@@ -440,7 +441,7 @@ $('mvbtn').addEventListener('click',function(){openSheet('mv');});
 var DI={Food:'food',Transport:'bus',Housing:'home','Bills and Utilities':'bolt',Health:'heart',Shopping:'bag',Family:'users',Entertainment:'play',Education:'book',Insurance:'shield','Loan and EMI':'percent',Other:'dots',Salary:'job',Business:'store',Pension:'sunrise'};
 var ICS=['food','bus','home','bolt','heart','bag','users','play','book','shield','percent','job','store','sunrise','tag','dots'];
 if(!S.cats)S.cats={out:XC.map(function(n){return {n:n,i:DI[n]||'tag'};}),in:IC.map(function(n){return {n:n,i:DI[n]||'tag'};})};
-var af='all',ct='out',cat={};
+var af='all',ct='out',cat={},alim=100;
 function catIcon(t,n){var c=S.cats[t].filter(function(x){return x.n===n;})[0];return c?c.i:'tag';}
 function put(a,o){var i=a.findIndex(function(x){return x.id===o.id;});if(i>-1)a[i]=o;else a.push(o);}
 function allRows(){return S.E.map(function(e){return {k:'e',x:e};}).concat(S.M.map(function(m){return {k:'m',x:m};})).sort(function(a,b){return a.x.date<b.x.date?1:a.x.date>b.x.date?-1:b.x.ts-a.x.ts;});}
@@ -449,7 +450,7 @@ function rowHtml(r){var x=r.x,a='<div class="entry" data-id="'+x.id+'" data-k="'
   return a+'<div class="ico">'+icon(catIcon(x.type,x.cat))+'</div><div class="t"><b>'+esc(x.name)+'</b><span>'+esc(x.cat)+', '+PN[x.acct]+', '+dl(x.date)+'</span></div><div class="a num">'+(x.type==='in'?'+':'−')+money(x.amt)+'</div></div>';}
 function renderAct(){
   var rows=allRows().filter(function(r){var x=r.x;return af==='all'||(r.k==='e'?x.acct===af:(x.from===af||x.to===af));});
-  $('alist').innerHTML=rows.length?rows.map(rowHtml).join(''):'<p class="muted" style="padding:12px 0">Nothing here yet.</p>';
+  $('alist').innerHTML=rows.length?rows.slice(0,alim).map(rowHtml).join('')+(rows.length>alim?'<button class="btn alt" type="button" id="amore">Show more</button>':''):'<p class="muted" style="padding:12px 0">Nothing here yet.</p>';
   document.querySelectorAll('#afil button').forEach(function(b){b.classList.toggle('on',b.dataset.af===af);});
 }
 function renderCats(){
@@ -478,7 +479,8 @@ function saveCat(){
 }
 document.addEventListener('click',function(ev){
   var x;
-  if(x=ev.target.closest('[data-af]')){af=x.dataset.af;renderAct();}
+  if(x=ev.target.closest('[data-af]')){af=x.dataset.af;alim=100;renderAct();}
+  else if(ev.target.closest('#amore')){alim+=100;renderAct();}
   else if(x=ev.target.closest('[data-ct]')){ct=x.dataset.ct;renderCats();}
   else if(x=ev.target.closest('[data-cat]'))editCat(x.dataset.cat);
   else if(ev.target.closest('[data-addcat]'))editCat(null);
