@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-<meta name="theme-color" content="#0E5952" />
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" id="manifest-link" href="manifest.webmanifest">
 <meta name="theme-color" content="#F6F4EE">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F1A19">
 <link rel="icon" href="icon-192.png">
@@ -247,13 +245,30 @@ button:active,.entry:active,.card[data-go]:active{transform:scale(.97)}
   <p class="fine">Panam keeps your data on this device, in the browser. Clearing the browser's site data erases it, so save a backup now and then. Backup files are readable, so keep them private. Import accepts Panam and CampusCash backups and skips entries you already have. The CSV has entries only, not Savings moves.</p>
 </div></div>
 <div id="overviewv" class="hidden"><div class="wrap">
-  <header class="top"><h1 style="margin:0">Overview</h1></header>
+  <header class="top" style="justify-content:flex-start;gap:10px"><h1 style="margin:0">Overview</h1><button class="link" type="button" id="owhat" aria-expanded="false" aria-controls="ohelp" style="color:var(--muted);font-weight:500;font-size:14px;min-height:40px;padding:0 8px">What is this?</button></header>
+  <section class="card hidden" id="ohelp" style="margin-bottom:12px;padding:16px"><p style="font-size:14px;color:var(--muted);margin:0">Overview turns your entries into a monthly picture: where your money went by category, your day-by-day spending pace, Cash vs. Bank / UPI split, and income sources. Use the arrows below to look back at earlier months.</p></section>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><button class="iconbtn" type="button" data-om="-1" aria-label="Previous month"><svg class="i" data-i="back"></svg></button><b id="olabel" style="font:600 18px Fraunces,Georgia,serif"></b><button class="iconbtn" type="button" id="onext" data-om="1" aria-label="Next month"><svg class="i" data-i="fwd"></svg></button></div>
   <section class="card" id="osum"></section>
-  <section class="card" style="margin-top:12px"><h2>Where it went</h2><div id="odon"></div></section>
-  <section class="card" style="margin-top:12px"><h2>Day by day</h2><div id="oday"></div></section>
-  <section class="card" style="margin-top:12px"><h2>Cash and Bank / UPI</h2><div id="osplit"></div></section>
+  <section class="card hidden" id="oempty" style="margin-top:12px;text-align:center;padding:28px 20px">
+    <svg viewBox="0 0 160 64" style="width:160px;height:64px;display:block;margin:0 auto 14px" aria-hidden="true">
+      <circle cx="38" cy="32" r="20" fill="none" stroke="var(--raised)" stroke-width="9"/>
+      <circle cx="38" cy="32" r="20" fill="none" stroke="var(--border)" stroke-width="9" stroke-dasharray="48 78" transform="rotate(-90 38 32)"/>
+      <rect x="78" y="34" width="10" height="20" rx="3" fill="var(--raised)"/>
+      <rect x="93" y="20" width="10" height="34" rx="3" fill="var(--border)"/>
+      <rect x="108" y="28" width="10" height="26" rx="3" fill="var(--raised)"/>
+      <rect x="123" y="12" width="10" height="42" rx="3" fill="var(--border)"/>
+      <rect x="138" y="24" width="10" height="30" rx="3" fill="var(--raised)"/>
+    </svg>
+    <b style="display:block;font-size:17px">Nothing to chart yet</b>
+    <p class="fine" style="margin:6px auto 0;max-width:34ch">Once you record income or spending for this month, your category breakdown, daily pace, and Cash vs. Bank / UPI split will appear here.</p>
+    <button class="btn alt" type="button" id="oadd" style="margin-top:16px">Add an entry</button>
+  </section>
+  <div id="ocards">
+    <section class="card" style="margin-top:12px"><h2>Where it went</h2><div id="odon"></div></section>
+    <section class="card" style="margin-top:12px"><h2>Day by day</h2><div id="oday"></div></section>
+    <section class="card" style="margin-top:12px"><h2>Cash and Bank / UPI</h2><div id="osplit"></div></section>
     <section class="card" style="margin-top:12px"><h2>Where it came from</h2><div id="oinc"></div></section>
+  </div>
 </div></div>
 <div id="budgetv" class="hidden"><div class="wrap">
   <header class="top"><h1 style="margin:0">Budget</h1></header>
@@ -612,10 +627,15 @@ function renderOverview(){
   var sp=os.cash+os.bank;
   $('osplit').innerHTML=sp?'<div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-bottom:8px"><div style="width:'+(os.cash/sp*100)+'%;background:'+P[1]+'"></div><div style="flex:1;background:'+P[0]+'"></div></div>'+mrow('Cash <span class="muted">'+Math.round(os.cash/sp*100)+'%</span>',money(os.cash),P[1])+mrow('Bank / UPI <span class="muted">'+Math.round(os.bank/sp*100)+'%</span>',money(os.bank),P[0]):'<p class="muted">No spending this month.</p>';
   $('oinc').innerHTML=barList(os.inc,P[0]);
+  var empty=!(st.mi||st.mo||st.net);
+  $('oempty').classList.toggle('hidden',!empty);
+  $('ocards').classList.toggle('hidden',empty);
 }
 document.addEventListener('click',function(ev){
   var x=ev.target.closest('[data-om]');
   if(x){ovm=shiftM(ovm,+x.dataset.om);if(ovm>today().slice(0,7))ovm=today().slice(0,7);renderOverview();}
+  else if(ev.target.closest('#owhat')){var h=$('ohelp'),on=h.classList.toggle('hidden');$('owhat').setAttribute('aria-expanded',String(!on));}
+  else if(ev.target.closest('#oadd')){openSheet('out');}
 });
 
 /* ===== COMFORT AND CURRENCY ===== */
@@ -853,6 +873,15 @@ render();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(function(){});}catch(e){}
 if(S.lock)showLock();
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js');
+(function(){
+  if(!/^https?:$/.test(location.protocol))return;
+  fetch('manifest.webmanifest').then(function(r){if(!r.ok)throw 0;return r.json();}).catch(function(){
+    var base=new URL('./',location.href).href;
+    var m={name:'Panam',short_name:'Panam',description:'Simple, private money tracking that works offline.',start_url:base,scope:base,display:'standalone',background_color:'#F6F4EE',theme_color:'#1F6F6B',icons:[{src:new URL('icon-192.png',base).href,sizes:'192x192',type:'image/png',purpose:'any'},{src:new URL('icon-512.png',base).href,sizes:'512x512',type:'image/png',purpose:'any'}]};
+    var l=document.getElementById('manifest-link');
+    if(l)l.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
+  });
+})();
 </script>
 </body>
 </html>
